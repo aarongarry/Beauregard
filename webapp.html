@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fruit Catcher Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+      background: #cce7ff;
+    }
+    #logo {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 50px;
+      color: red;
+      font-weight: bold;
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    }
+    #scoreboard {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+    #highscore-board {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 18px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+    #lives {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+    .heart {
+      width: 30px;
+      height: 30px;
+      background: red;
+      clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 50% 80%, 18% 100%, 0% 38%);
+    }
+    .heart.empty {
+      background: transparent;
+      border: 2px solid red;
+    }
+    #game-over {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      color: red;
+      font-weight: bold;
+      display: none;
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+    }
+    #restart-btn, #start-btn {
+      position: absolute;
+      top: 65%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+    }
+    #restart-btn:hover, #start-btn:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div id="logo">Fruit Fallers</div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="scoreboard">Score: 0</div>
+  <div id="highscore-board">Highscore: 0</div>
+  <div id="lives"></div>
+  <div id="game-over">Game Over</div>
+  <button id="restart-btn">Try Again</button>
+  <button id="start-btn">Start</button>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreboard = document.getElementById('scoreboard');
+    const highscoreBoard = document.getElementById('highscore-board');
+    const livesContainer = document.getElementById('lives');
+    const restartBtn = document.getElementById('restart-btn');
+    const startBtn = document.getElementById('start-btn');
+    const gameOverText = document.getElementById('game-over');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let basket = {
+      x: canvas.width / 2 - 50,
+      y: canvas.height - 50,
+      width: 100,
+      height: 20
+    };
+
+    let fruits = [];
+    let fruitSize = 20;
+    let score = 0;
+    let highscore = localStorage.getItem('highscore') || 0;
+    let gameOver = false;
+    let gameStarted = false;
+    let lives = 3;
+    let fruitInterval = 2000;
+    let difficultyMultiplier = 1;
+
+    const fruitColors = ['red', 'orange', 'yellow', 'green', 'purple'];
+
+    function createLives() {
+      livesContainer.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        const heart = document.createElement('div');
+        heart.classList.add('heart');
+        if (i >= lives) heart.classList.add('empty');
+        livesContainer.appendChild(heart);
+      }
+    }
+
+    function createFruit() {
+      const numberOfFruits = Math.ceil(difficultyMultiplier * Math.random() * 2);
+      for (let i = 0; i < numberOfFruits; i++) {
+        fruits.push({
+          x: Math.random() * (canvas.width - fruitSize),
+          y: 0,
+          speed: Math.random() * (2 + difficultyMultiplier) + 2,
+          color: fruitColors[Math.floor(Math.random() * fruitColors.length)]
+        });
+      }
+    }
+
+    function drawBasket() {
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+    }
+
+    function drawFruits() {
+      fruits.forEach(fruit => {
+        ctx.fillStyle = fruit.color;
+        ctx.beginPath();
+        ctx.arc(fruit.x, fruit.y, fruitSize, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function updateFruits() {
+      fruits.forEach((fruit, index) => {
+        fruit.y += fruit.speed;
+
+        if (
+          fruit.y + fruitSize > basket.y &&
+          fruit.x > basket.x &&
+          fruit.x < basket.x + basket.width
+        ) {
+          score++;
+          fruits.splice(index, 1);
+        } else if (fruit.y > canvas.height) {
+          lives--;
+          createLives();
+          fruits.splice(index, 1);
+          if (lives <= 0) {
+            gameOver = true;
+          }
+        }
+      });
+    }
+
+    function updateScoreboard() {
+      scoreboard.textContent = `Score: ${score}`;
+      highscoreBoard.textContent = `Highscore: ${highscore}`;
+    }
+
+    function gameLoop() {
+      if (gameOver) {
+        gameOverText.style.display = 'block';
+        restartBtn.style.display = 'block';
+        if (score > highscore) {
+          highscore = score;
+          localStorage.setItem('highscore', highscore);
+        }
+        updateScoreboard();
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBasket();
+      drawFruits();
+      updateFruits();
+      updateScoreboard();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('mousemove', e => {
+      basket.x = e.clientX - basket.width / 2;
+      if (basket.x < 0) basket.x = 0;
+      if (basket.x > canvas.width - basket.width) basket.x = canvas.width - basket.width;
+    });
+
+    restartBtn.addEventListener('click', () => {
+      score = 0;
+      lives = 3;
+      createLives();
+      gameOver = false;
+      fruits = [];
+      fruitInterval = 2000;
+      difficultyMultiplier = 1;
+      gameOverText.style.display = 'none';
+      restartBtn.style.display = 'none';
+      createFruit();
+      gameLoop();
+    });
+
+    startBtn.addEventListener('click', () => {
+      score = 0;
+      lives = 3;
+      createLives();
+      gameOver = false;
+      fruits = [];
+      gameStarted = true;
+      difficultyMultiplier = 1;
+      startBtn.style.display = 'none';
+      createFruit();
+      gameLoop();
+      setInterval(() => {
+        if (gameStarted && !gameOver) {
+          difficultyMultiplier += 0.1; // Increases difficulty faster
+          createFruit();
+          if (fruitInterval > 300) fruitInterval -= 20; // Lower limit for interval
+        }
+      }, fruitInterval);
+    });
+
+    highscoreBoard.textContent = `Highscore: ${highscore}`;
+    createLives();
+    startBtn.style.display = 'block';
+  </script>
+</body>
+</html>

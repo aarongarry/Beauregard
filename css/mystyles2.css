@@ -1,0 +1,64 @@
+body{
+    font-family: monospace;
+    color: rgb(161, 213, 223);
+    background-color: rgb(55, 74, 74);
+}
+h1{
+    font-family:'Times New Roman', Times, serif ;
+    color: aliceblue;
+    font-size: 300%;
+}
+.pbold{
+    font-weight: bold;
+}
+a:visited{
+    color: azure;
+}
+
+img{
+    position: relative;
+    width: 15%;
+    left: 140px;
+    top: 30px;
+    border: 2px white;
+    padding: 10px;
+    float: right;
+}
+a:hover{
+    text-decoration: wavy;
+}
+a{
+    color: rgb(227, 205, 176);
+}
+.common{
+    position: absolute;
+    padding: 5px;
+    margin: 5px;
+}
+.bottom{
+    position: fixed;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+    text-align: center;
+    font-style: italic;
+    background-color: rgb(0, 0, 0);
+    font-size: 50%;
+}
+.top{
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    text-align: center;
+}
+.content{
+    top: 150px;
+    bottom: 50px;
+    left: 0px;
+    right: 0px;
+}
+.nav{
+    z-index: 1;
+    position: relative;
+    float: right;
+}

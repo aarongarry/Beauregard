@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Square Escape</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #restart-btn {
+            display: none;
+            background-color: green;
+            color: white;
+            padding: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+        }
+        #restart-btn:hover {
+            background-color: darkgreen;
+        }
+        #how-to-play {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 18px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: blue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #start-btn:hover {
+            background-color: darkblue;
+        }
+        #highscore {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 18px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #total-killed {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #score {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #title {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            font-weight: bold;
+            color: #ffcc00;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <button id="restart-btn" onclick="startGame()">Try Again</button>
+    <button id="start-btn" onclick="startGame()">Start Game</button>
+    <div id="how-to-play">
+        <h3>How to Play</h3>
+        <p>1. Move the white diamond with your mouse.</p>
+        <p>2. Pass through green gates to destroy red squares.</p>
+        <p>3. Avoid touching the red squares, or you will lose!</p>
+        <p>Good luck!</p>
+    </div>
+    <div id="title">Square Escape</div>
+    <div id="highscore">High Score: 0</div>
+    <div id="total-killed">Squares Killed: 0</div>
+    <div id="score">Score: 0</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const restartBtn = document.getElementById('restart-btn');
+        const howToPlay = document.getElementById('how-to-play');
+        const startBtn = document.getElementById('start-btn');
+        const highscoreDiv = document.getElementById('highscore');
+        const totalKilledDiv = document.getElementById('total-killed');
+        const scoreDiv = document.getElementById('score');
+        const titleDiv = document.getElementById('title');
+
+        let player, enemies, gates, score, highscore, totalKilled, gameOver, playerSize, enemySize, gateSize, spawnRate;
+        const enemySpeed = 1.75; // Slightly increased enemy speed
+        const gateProximity = 150;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function startGame() {
+            playerSize = 30;
+            enemySize = 30;
+            gateSize = 50;
+            spawnRate = 0.0015; // Reduced spawn rate
+            score = 0;
+            gameOver = false;
+            player = { x: canvas.width / 2, y: canvas.height / 2, size: playerSize };
+            enemies = [];
+            gates = [];
+            resizeCanvas();
+
+            restartBtn.style.display = 'none';
+            howToPlay.style.display = 'none';
+            startBtn.style.display = 'none';
+            titleDiv.style.display = 'none';
+
+            totalKilled = localStorage.getItem('totalKilled') ? parseInt(localStorage.getItem('totalKilled')) : 0;
+
+            gameLoop();
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y - player.size / 2);
+            ctx.lineTo(player.x - player.size / 2, player.y + player.size / 2);
+            ctx.lineTo(player.x + player.size / 2, player.y + player.size / 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = 'red';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+            });
+        }
+
+        function drawGates() {
+            ctx.fillStyle = 'green';
+            gates.forEach(gate => {
+                ctx.fillRect(gate.x, gate.y, gate.size, gate.size);
+            });
+        }
+
+        function checkCollisions() {
+            for (let enemy of enemies) {
+                if (player.x < enemy.x + enemy.size && player.x + player.size > enemy.x &&
+                    player.y < enemy.y + enemy.size && player.y + player.size > enemy.y) {
+                    gameOver = true;
+                    break;
+                }
+            }
+
+            for (let i = 0; i < gates.length; i++) {
+                const gate = gates[i];
+                if (player.x < gate.x + gate.size && player.x + player.size > gate.x &&
+                    player.y < gate.y + gate.size && player.y + player.size > gate.y) {
+                    enemies = enemies.filter(enemy => {
+                        const distX = Math.abs(enemy.x - gate.x);
+                        const distY = Math.abs(enemy.y - gate.y);
+                        if (distX < gateProximity && distY < gateProximity) {
+                            score++;
+                            totalKilled++;
+                            localStorage.setItem('totalKilled', totalKilled);
+                            return false;
+                        }
+                        return true;
+                    });
+                    gates.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        function moveEnemies() {
+            enemies.forEach(enemy => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const angle = Math.atan2(dy, dx);
+                enemy.x += Math.cos(angle) * enemySpeed;
+                enemy.y += Math.sin(angle) * enemySpeed;
+            });
+        }
+
+        function spawnEnemies() {
+            if (Math.random() < spawnRate) {
+                const x = Math.random() * (canvas.width - enemySize);
+                const y = Math.random() * (canvas.height - enemySize);
+                if (Math.abs(x - player.x) > playerSize && Math.abs(y - player.y) > playerSize) {
+                    enemies.push({ x, y, size: enemySize });
+                }
+            }
+        }
+
+        function spawnGates() {
+            if (Math.random() < 0.01) { // Increased gate spawn rate
+                gates.push({ x: Math.random() * (canvas.width - gateSize), y: Math.random() * (canvas.height - gateSize), size: gateSize });
+            }
+        }
+
+        function gameLoop() {
+            if (gameOver) {
+                displayGameOver();
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            canvas.addEventListener('mousemove', (e) => {
+                player.x = e.offsetX;
+                player.y = e.offsetY;
+            });
+
+            spawnEnemies();
+            spawnGates();
+            moveEnemies();
+            checkCollisions();
+
+            if (score % 10 === 0) {
+                spawnRate = Math.min(spawnRate + 0.0002, 0.03); // Very slow spawn rate increase
+            }
+
+            drawPlayer();
+            drawEnemies();
+            drawGates();
+
+            totalKilledDiv.textContent = `Squares Killed: ${totalKilled}`;
+            scoreDiv.textContent = `Score: ${score}`;  // Update the score display
+            requestAnimationFrame(gameLoop);
+        }
+
+        function displayGameOver() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'red';
+            ctx.font = '30px Arial';
+            ctx.fillText(`Game Over! Score: ${score}`, canvas.width / 3, canvas.height / 2);
+
+            if (score > highscore) {
+                highscore = score;
+                localStorage.setItem('highscore', highscore);
+            }
+
+            highscoreDiv.textContent = `High Score: ${highscore}`;
+            restartBtn.style.display = 'block';
+            titleDiv.style.display = 'block';
+        }
+
+        window.onload = () => {
+            highscore = localStorage.getItem('highscore') ? parseInt(localStorage.getItem('highscore')) : 0;
+            highscoreDiv.textContent = `High Score: ${highscore}`;
+            resizeCanvas();
+            titleDiv.style.display = 'block';
+        };
+
+        window.addEventListener('resize', resizeCanvas);
+    </script>
+</body>
+</html>
